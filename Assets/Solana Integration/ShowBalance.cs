@@ -1,6 +1,9 @@
+using System;
 using Solana.Unity.SDK;
 using TMPro;
 using UnityEngine;
+
+// ReSharper disable once CheckNamespace
 
 public class ShowBalance : MonoBehaviour
 {
@@ -23,6 +26,6 @@ public class ShowBalance : MonoBehaviour
     
     private void BalanceChanged(double sol)
     {
-        _txtBalance.text = $"{sol} SOL";
+        _txtBalance.text = $"{Math.Round(sol, 3)} SOL";
     }
 }

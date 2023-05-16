@@ -35,7 +35,7 @@ namespace Solana.Unity.SDK.Example
             dropdownRpcCluster.interactable = true;
             passwordInputField.text = string.Empty;
 
-            if (Web3.Base != null)
+            if (Web3.Wallet != null)
             {
                 dropdownRpcCluster.interactable = false;
                 manager.ShowScreen(this, "wallet_screen");
@@ -53,17 +53,10 @@ namespace Solana.Unity.SDK.Example
             loginBtnGoogle.onClick.AddListener(delegate{LoginCheckerWeb3Auth(Provider.GOOGLE);});
             loginBtnTwitter.onClick.AddListener(delegate{LoginCheckerWeb3Auth(Provider.TWITTER);});
             loginBtnWalletAdapter.onClick.AddListener(LoginCheckerWalletAdapter);
-            loginBtnSms.onClick.AddListener(LoginCheckerSms);
             loginBtnXNFT.onClick.AddListener(LoginCheckerXnft);
             
             loginBtnXNFT.gameObject.SetActive(false);
-            
-            if (Application.platform == RuntimePlatform.Android)
-            {
-                loginBtnWalletAdapter.gameObject.SetActive(false);
-                loginBtnSms.gameObject.SetActive(true);
-            }
-            
+
             if (Application.platform is RuntimePlatform.LinuxEditor or RuntimePlatform.WindowsEditor or RuntimePlatform.OSXEditor)
             {
                 loginBtnWalletAdapter.onClick.RemoveListener(LoginCheckerWalletAdapter);
@@ -80,22 +73,10 @@ namespace Solana.Unity.SDK.Example
             var account = await Web3.Instance.LoginInGameWallet(password);
             CheckAccount(account);
         }
-        
-        private async void LoginCheckerPhantom()
-        {
-            var account = await Web3.Instance.LoginPhantom();
-            CheckAccount(account);
-        }
-        
-        private async void LoginCheckerSms()
-        {
-            var account = await Web3.Instance.LoginSolanaMobileStack();
-            CheckAccount(account);
-        }
-        
+
         private async void LoginCheckerWeb3Auth(Provider provider)
         {
-            var account = await Web3.Instance.LoginInWeb3Auth(provider);
+            var account = await Web3.Instance.LoginWeb3Auth(provider);
             CheckAccount(account);
         }
 

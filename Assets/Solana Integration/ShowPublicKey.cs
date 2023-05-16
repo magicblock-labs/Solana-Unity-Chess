@@ -1,5 +1,6 @@
 using codebase.utility;
 using Solana.Unity.SDK;
+using Solana.Unity.Wallet;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -33,7 +34,7 @@ public class ShowPublicKey : MonoBehaviour
         if(Web3.Account == null) return;
         string pk = Web3.Account.PublicKey.ToString();
         _txtPk.text = $"{pk.Substring(0, 3)}...{pk.Substring(pk.Length - 3)}";
-        Debug.Log(pk);
+        Debug.Log($"Logged in with: {pk}");
     }
     
     public void CopyPublicKey()

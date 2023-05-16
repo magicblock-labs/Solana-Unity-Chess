@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviourSingleton<GameManager> {
 	public static event Action GameEndedEvent;
 	public static event Action GameResetToHalfMoveEvent;
 	public static event Action MoveExecutedEvent;
+	public static event Action<Movement> MoveEvent;
 	
 	public Board CurrentBoard {
 		get {
@@ -85,6 +86,11 @@ public class GameManager : MonoBehaviourSingleton<GameManager> {
 		game = serializersByType[selectedSerializationType].Deserialize(serializedGame);
 		NewGameStartedEvent?.Invoke();
 	}
+	
+	public void LoadGame(Game gameInstance) {
+		game = gameInstance;
+		NewGameStartedEvent?.Invoke();
+	}
 
 	public void ResetGameToHalfMoveIndex(int halfMoveIndex) {
 		if (!game.ResetGameToHalfMoveIndex(halfMoveIndex)) return;
@@ -108,6 +114,7 @@ public class GameManager : MonoBehaviourSingleton<GameManager> {
 		}
 
 		MoveExecutedEvent?.Invoke();
+		MoveEvent?.Invoke(move);
 
 		return true;
 	}
@@ -200,5 +207,11 @@ public class GameManager : MonoBehaviourSingleton<GameManager> {
 
 	public bool HasLegalMoves(Piece piece) {
 		return game.TryGetLegalMovesForPiece(piece, out _);
+	}
+
+	public void FlipBoard()
+	{
+		BoardManager.Instance.gameObject.transform.rotation = new Quaternion(0, 180, 0, 0);
+		UIManager.Instance.FlipIndicators();
 	}
 }

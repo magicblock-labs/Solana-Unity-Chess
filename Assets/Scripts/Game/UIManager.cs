@@ -163,5 +163,10 @@ public class UIManager : MonoBehaviourSingleton<UIManager> {
 		blackTurnIndicator.enabled = sideToMove == Side.Black;
 	}
 
+	public void FlipIndicators()
+	{
+		whiteTurnIndicator.transform.parent.parent.rotation = new Quaternion(180, 0, 0, 0);
+	}
+
 	private void UpdateGameStringInputField() => GameStringInputField.text = GameManager.Instance.SerializeGame();
 }
