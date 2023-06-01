@@ -1,19 +1,12 @@
-# UnityChess
+# Solana Unity Chess
 
-UnityChess is a 3D Chess game built using Unity/C#.
+Solana Unity Chess is a #d Chess game built using Unity/C# and the Solana.Unity-SDK.
+Unity is used as UI/Rendering, the Solana.Unity-SDK is the interface and the state/logic is on-chain (on Solana).
+
+This repository was created with the purpose of demostrating the use of the [Solana.Unity-SDK](https://solana.unity-sdk.gg/).
+
+## Unity Chess
+
+The UI is a simplifed version of [UnityChess](https://github.com/ErkrodC/UnityChess), by [ErkrodC](https://github.com/ErkrodC). Make sure to support him and leave a star to the Unity Chess repository.
 
 ![UnityChess demo](https://media.githubusercontent.com/media/ErkrodC/UnityChess/development/UnityChess.gif)
-
-### Contributing
-Downloading a zip of the repository may not work. To properly clone, [download](https://git-lfs.github.com/) and install Git LFS.
-For a more in-depth explanation/guide, visit the relevant [wiki page](https://github.com/ErkrodC/UnityChess/wiki/Getting-The-Project).
-
-Please follow the collaborative github workflow, well described [here](https://github.com/asmeurer/git-workflow/blob/master/README.md).
-
-The project is using the following version of Unity: [Unity 2021.2.6f1](https://unity3d.com/get-unity/download/archive)
-
-It's recommended you use [Unity Hub](https://unity3d.com/get-unity/download) to manage Unity versions as it's likely the project will be upgraded as new versions come out.
-
-### Installation
-
-At the moment, there have been no releases. The project is still in the early stages of development.
