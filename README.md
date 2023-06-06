@@ -1,6 +1,6 @@
 # Solana Unity Chess
 
-Solana Unity Chess is a 3D Chess game built using Unity/C# and the Solana.Unity-SDK.
+Solana Unity Chess is a 3D Chess game built using Unity/C# and the [Solana.Unity-SDK](https://github.com/magicblock-labs/Solana.Unity-SDK).
 Unity is used as UI/Rendering, the Solana.Unity-SDK is the interface and the state/logic is on-chain (on Solana).
 
 This repository was created with the purpose of demostrating the use of the [Solana.Unity-SDK](https://solana.unity-sdk.gg/).
