@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using codebase.utility;
 using Cysharp.Threading.Tasks;
 using Solana.Unity.Programs;
 using Solana.Unity.Rpc.Core.Http;
+using Solana.Unity.Rpc.Core.Sockets;
+using Solana.Unity.Rpc.Messages;
 using Solana.Unity.Rpc.Models;
 using Solana.Unity.Rpc.Types;
 using Solana.Unity.SDK;
@@ -18,106 +21,192 @@ using UnityEngine;
 using UnityEngine.UI;
 using Color = SolChess.Types.Color;
 using Game = SolChess.Accounts.Game;
-using Square = SolChess.Types.Square;
+using Piece = UnityChess.Piece;
+using Square = UnityChess.Square;
 
-// ReSharper disable once CheckNamespace
+//ReSharper disable once CheckNamespace
 
 public class SolChessClient : MonoBehaviour
 {
-    //private static readonly PublicKey ProgramId = new("AH3AYE6ZSZEGqeDiAGjCT9UdGakK3nZbzPmAKcbdKC3W");
-    private static readonly PublicKey ProgramId = new("CCdU3zmYqPZaR2twy5hqcJmFV36tRpFC81seKUE8HVwX");
-
-    [SerializeField] 
+    [SerializeField]
     private Button newGameBtn;
-    [SerializeField] 
+    
+    [SerializeField]
     private Button joinGameBtn;
-    [SerializeField] 
+    
+    [SerializeField]
     private TextMeshProUGUI txtGameId;
-
-    private Game _game;
-    private PublicKey _gameAddress;
-
     
-    private SolChess.SolChessClient _solChessProgramInternal;
-    private SolChess.SolChessClient SolChessProgram => _solChessProgramInternal ??= new SolChess.SolChessClient(Web3.Rpc, Web3.WsRpc, ProgramId);
-
+    //private readonly PublicKey solchessProgramId = new("ChessfTT9XpWA9WxrSSLMnCseRqykb9LaMXKMhyWEiR4");
+    private readonly PublicKey _solchessProgramId = new("CCdU3zmYqPZaR2twy5hqcJmFV36tRpFC81seKUE8HVwX");
     
-    private void Start()
+    private SolChess.SolChessClient _solChessProgramClient;
+    private PublicKey _gameInstanceId;
+    private Toast _toast;
+
+    private SolChess.SolChessClient SolChessProgramClient => _solChessProgramClient ??= 
+        new SolChess.SolChessClient(Web3.Rpc, Web3.WsRpc, _solchessProgramId);
+    
+    void Start()
     {
-        joinGameBtn.onClick.AddListener(async () =>
-        {
-            _gameAddress = new PublicKey(txtGameId.text.Trim().Replace("\u200B", ""));
-            var game = (await SolChessProgram.GetGameAsync(_gameAddress))?.ParsedResult;
-            SetGame(game);
-            var user = FindUserPda(Web3.Account);
-            switch (_game?.GameState)
-            {
-                case GameState.Waiting:
-                {
-                    var res = await JoinGame(_gameAddress, _game.White == null ? Color.White : Color.Black);
-                    Debug.Log("JoinGameTx: " + res.Result);
-                    break;
-                }
-                case GameState.Black or GameState.White 
-                      when _game.White.Equals(user) || _game.Black.Equals(user):
-                    Debug.Log("Re-Joining the game");
-                    break;
-                default:
-                    throw new Exception("Game is not in a joinable state");
-            }
-            SubscribeToGame(_gameAddress).Forget();
-        });
-        
-        newGameBtn.onClick.AddListener(async () =>
-        {
-            _gameAddress = FindGamePda(FindUserPda(Web3.Account));
-            var res = await InitializeAndJoinGame(_gameAddress);
-            Debug.Log("NewGameTx: " + res.Result);
-            SubscribeToGame(_gameAddress).Forget();
-
-        });
-
+        joinGameBtn.onClick.AddListener(CallJoinGame);
+        newGameBtn.onClick.AddListener(CallNewGame);
+        _toast = GetComponent<Toast>();
     }
 
-    private async UniTask SubscribeToGame(PublicKey gameAddress)
+    private void CallJoinGame()
     {
-        await SolChessProgram.SubscribeGameAsync(gameAddress,
-            (_, gameInfo, gameUpdate) =>
-            {
-                Debug.Log("Game changed");
-                Debug.Log(gameUpdate);
-                SetGame(gameUpdate);
-            },
-            Commitment.Confirmed
-        );
+        JoinGame().Forget();
+    }
+    
+    private void CallNewGame()
+    {
+        NewGame().Forget();
     }
 
     private void OnEnable()
     {
-        GameManager.MoveEvent += GameManagerOnMoveEvent;
+        GameManager.MoveEvent += OnMove;
     }
-
+    
     private void OnDisable()
     {
-        GameManager.MoveEvent -= GameManagerOnMoveEvent;
+        GameManager.MoveEvent -= OnMove;
+    }
+
+    private async UniTask SubscribeToGame(PublicKey gameId)
+    {
+        await _solChessProgramClient.SubscribeGameAsync(gameId, OnGameUpdate, Commitment.Confirmed);
+    }
+
+    private void OnGameUpdate(SubscriptionState subState, ResponseValue<AccountInfo> gameInfo, Game game)
+    {
+        Debug.Log("Game updated");
+        if (GameState.White.Equals(game.GameState) || GameState.Black.Equals(game.GameState))
+        {
+            newGameBtn.gameObject.transform.parent.parent.gameObject.SetActive(false);
+        }
+        SetGame(game);
+    }
+
+    private async UniTask NewGame()
+    {
+        if(Web3.Account == null) return;
+        Loading.StartLoading();
+        var userPda = FindUserPda(Web3.Account);
+        ulong gamePdaIdx = 0;
+        PublicKey gamePda = null;
+        Debug.Log($"Searching game PDA");
+        while (gamePda == null)
+        {
+            var gameTempPda = FindGamePda(userPda, gamePdaIdx);
+            if(!await IsPdaInitialized(gameTempPda)) gamePda = gameTempPda;
+            gamePdaIdx++;
+        }
+        Debug.Log($"Sending transaction new Game");
+        var res = await JoinGameTransaction(gamePda, Color.White, true);
+        Debug.Log($"Signature: {res.Result}");
+        if (res.WasSuccessful)
+        {
+            Debug.Log($"Before confirm");
+            await Web3.Rpc.ConfirmTransaction(res.Result, Commitment.Confirmed);
+            Debug.Log($"After confirm");
+            
+            Game game = null;
+            var retry = 5;
+            while (game == null && retry > 0)
+            {
+                game = (await SolChessProgramClient.GetGameAsync(gamePda, Commitment.Confirmed)).ParsedResult;
+                retry--;
+                await UniTask.Delay(TimeSpan.FromSeconds(1));
+            }
+            Debug.Log($"Game retrieved");
+            _gameInstanceId = gamePda;
+            Debug.Log($"Setting game");
+            SetGame(game);
+            Debug.Log($"Subcribing to game");
+            SubscribeToGame(gamePda).Forget();
+            Debug.Log($"Game Id: {gamePda}");
+            newGameBtn.onClick.RemoveAllListeners();
+            newGameBtn.onClick.AddListener(() =>
+            {
+                Clipboard.Copy(gamePda.ToString());
+                _toast.ShowToast("Game Id copied to clipboard", 3);
+            });
+            newGameBtn.GetComponentInChildren<TextMeshProUGUI>().text = "Copy Game Id";
+            joinGameBtn.interactable = false;
+            txtGameId.GetComponentInParent<TMP_InputField>().text = gamePda.ToString();
+        }
+        Loading.StopLoading();
+    }
+
+    private async UniTask JoinGame()
+    {
+        if(Web3.Account == null) return;
+        Loading.StartLoading();
+        var gameId = txtGameId.text.Trim().Replace("\u200B", "");
+        var game = (await SolChessProgramClient.GetGameAsync(gameId, Commitment.Confirmed)).ParsedResult;
+        _gameInstanceId = new PublicKey(gameId);
+        SetGame(game);
+        SubscribeToGame(_gameInstanceId).Forget();
+        var userPda = FindUserPda(Web3.Account.PublicKey);
+        switch (game?.GameState)
+        {
+            case GameState.Waiting:
+            {
+                var res = await JoinGameTransaction(gameId, game.White == null ? Color.White : Color.Black).AsUniTask();
+                Debug.Log($"Signature: {res.Result}");
+                await Web3.Rpc.ConfirmTransaction(res.Result, Commitment.Confirmed).AsUniTask();
+                break;
+            }
+            case GameState.Black or GameState.White when game.Black.Equals(userPda) || game.White.Equals(userPda):
+            {
+                Debug.Log("Re-Joining a game");
+                break;
+            }
+            default:
+                throw new Exception("Invalid game state"); 
+        }
+        joinGameBtn.gameObject.transform.parent.parent.gameObject.SetActive(false);
+    }
+    
+    private async void OnMove(Movement move)
+    {
+        if(Web3.Account == null) return;
+        if(_gameInstanceId == null) return;
+        var from = new SolChess.Types.Square()
+        {
+            File = (byte) UnMapFile(move.Start.File),
+            Rank = (byte) UnMapRank(move.Start.Rank)
+        };
+        
+        var to = new SolChess.Types.Square()
+        {
+            File = (byte) UnMapFile(move.End.File),
+            Rank = (byte) UnMapRank(move.End.Rank)
+        };
+        var res = await MakeMoveTransaction(from, to);
+        Debug.Log(res.Result);
     }
 
     private void SetGame(Game game)
     {
-        List<(UnityChess.Square, UnityChess.Piece)> pieces = new List<(UnityChess.Square, UnityChess.Piece)>();
-        _game = game;
+        Loading.StopLoading();
+        if(game == null) throw new Exception("Game not found");
+        List<(Square, Piece)> pieces = new List<(Square, Piece)>();
+        
         for (var f = 0; f < game.Board.BoardField.Length; f++)
         {
             for (var i = 0; i < game.Board.BoardField[f].Length; i++)
             {
                 var piece = game.Board.BoardField[f][i];
-                if (piece == SolChess.Types.Piece.Empty) continue;
+                if(piece == SolChess.Types.Piece.Empty) continue;
                 var isWhite = piece.ToString().Contains("White");
-                var pieceName = piece.ToString().Replace("Black", "").Replace("White", "");
+                var pieceName = piece.ToString().Replace("White", "").Replace("Black", "");
                 var pieceType = Type.GetType($"UnityChess.{pieceName}, UnityChessLib");
-                if(pieceType == null) throw new Exception($"Piece type {pieceName} not found");
+                if(pieceType == null) throw new Exception($"Invalid piece type: {pieceName}");
                 var pieceInstance = Activator.CreateInstance(pieceType, isWhite ? Side.White : Side.Black);
-                pieces.Add((new UnityChess.Square(MapFile(i), MapRank(f)), pieceInstance as UnityChess.Piece));
+                pieces.Add((new Square(MapFile(i), MapRank(f)), (Piece) pieceInstance));
             }
         }
         var conditions = new GameConditions(
@@ -127,110 +216,79 @@ public class SolChessClient : MonoBehaviour
             blackCanCastleKingside: game.CastlingRight.BlackKingside,
             blackCanCastleQueenside: game.CastlingRight.BlackQueenside,
             enPassantSquare: game.Enpassant == null ? UnityChess.Square.Invalid : 
-                new UnityChess.Square(MapFile(game.Enpassant.File), MapRank(game.Enpassant.Rank)),
+                new Square(MapFile(game.Enpassant.File), MapFile(game.Enpassant.Rank)),
             halfMoveClock: 0,
             turnNumber: 1
         );
-        GameManager.Instance.LoadGame(new UnityChess.Game(conditions, pieces.ToArray()));
-        var amIWhite = game.White == null || game.White.Equals(FindUserPda(Web3.Account));
-        if(!amIWhite) GameManager.Instance.FlipBoard();
-        if (_game.GameState == GameState.White && !amIWhite || _game.GameState == GameState.Black && amIWhite)
-        {
+        var unityGame = new UnityChess.Game(conditions, pieces.ToArray());
+        GameManager.Instance.LoadGame(unityGame);
+        var imAWhite = game.White != null && game.White.Equals(FindUserPda(Web3.Account.PublicKey));
+        if(!imAWhite) GameManager.Instance.FlipBoard();
+        if(game.GameState == GameState.White && !imAWhite || game.GameState == GameState.Black && imAWhite)
             BoardManager.Instance.SetActiveAllPieces(false);
-        }
-    }
-
-    private async void GameManagerOnMoveEvent(Movement move)
-    {
-        var from = new Square()
-        {
-            File = (byte) UnMapFile(move.Start.File),
-            Rank = (byte) UnMapRank(move.Start.Rank)
-        };
-        var to = new Square()
-        {
-            File = (byte) UnMapFile(move.End.File),
-            Rank = (byte) UnMapRank(move.End.Rank)
-        };
-        var res = await MakeMove(from, to);
-        Debug.Log("MoveTx: " + res.Result); 
-    }
-    
-    private async Task<RequestResult<string>> InitializeAndJoinGame(PublicKey gameAddress, Color color = Color.White)
-    {
-        var accounts = new InitializeGameAccounts()
-        {
-            Game = gameAddress,
-            Payer = Web3.Account,
-            User = FindUserPda(Web3.Account),
-            SystemProgram = SystemProgram.ProgramIdKey,
-            Clock = SysVars.ClockKey
-        };
-        var joinGameAccounts = new JoinGameAccounts()
-        {
-            Game = gameAddress,
-            Payer = Web3.Account,
-            User = FindUserPda(Web3.Account)
-        };
-        var tx = new Transaction()
-        {
-            FeePayer = Web3.Account,
-            Instructions = new List<TransactionInstruction>(),
-            RecentBlockHash = await Web3.BlockHash()
-        };
-        if (!await IsUserInitialized())
-        {
-            var userInitAccounts = new InitializeUserAccounts()
-            {
-                Payer = Web3.Account,
-                User = FindUserPda(Web3.Account),
-                SystemProgram = SystemProgram.ProgramIdKey
-            };
-            tx.Instructions.Add(SolChess.Program.SolChessProgram.InitializeUser(userInitAccounts, ProgramId));
-        }
-        tx.Instructions.Add(SolChess.Program.SolChessProgram.InitializeGame(accounts,0, true, ProgramId));
-        tx.Instructions.Add(SolChess.Program.SolChessProgram.JoinGame(joinGameAccounts, color, ProgramId));
-        return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
     }
 
 
-    private async Task<RequestResult<string>> JoinGame(PublicKey gameAddress, Color color = Color.White)
+    #region Transactions
+
+    private async Task<RequestResult<string>> JoinGameTransaction(string gameId, Color color, bool initializeGame = false)
     {
+        var userPda = FindUserPda(Web3.Account);
         var accounts = new JoinGameAccounts()
         {
-            Game = gameAddress,
+            Game = new PublicKey(gameId),
             Payer = Web3.Account,
-            User = FindUserPda(Web3.Account)
+            User = userPda
         };
+        var joinGameIx = SolChessProgram.JoinGame(accounts: accounts, color, _solchessProgramId);
+
         var tx = new Transaction()
         {
             FeePayer = Web3.Account,
             Instructions = new List<TransactionInstruction>(),
             RecentBlockHash = await Web3.BlockHash()
         };
-        if (!await IsUserInitialized())
+        if (!await IsPdaInitialized(userPda))
         {
-            var userInitAccounts = new InitializeUserAccounts()
+            var initUserAccounts = new InitializeUserAccounts()
             {
                 Payer = Web3.Account,
-                User = FindUserPda(Web3.Account),
-                SystemProgram = SystemProgram.ProgramIdKey
+                User = userPda,
+                SystemProgram = SystemProgram.ProgramIdKey,
             };
-            tx.Instructions.Add(SolChess.Program.SolChessProgram.InitializeUser(userInitAccounts, ProgramId));
+            var initUserIx = SolChessProgram.InitializeUser(initUserAccounts, _solchessProgramId);
+            tx.Instructions.Add(initUserIx);
         }
-        tx.Instructions.Add(SolChess.Program.SolChessProgram.JoinGame(accounts, color, ProgramId));
+
+        if (initializeGame)
+        {
+            var initializeGameAccounts = new InitializeGameAccounts()
+            {
+                Payer = Web3.Account,
+                Game = new PublicKey(gameId),
+                User = userPda,
+                SystemProgram = SystemProgram.ProgramIdKey,
+                Clock = SysVars.ClockKey
+            };
+            var initGameIx = SolChessProgram.InitializeGame(initializeGameAccounts, 0, false, _solchessProgramId);
+            tx.Instructions.Add(initGameIx);
+        }
+
+        tx.Instructions.Add(joinGameIx);
+        
         return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
     }
     
-    private async Task<RequestResult<string>> MakeMove(Square from, Square to)
+    private async Task<RequestResult<string>> MakeMoveTransaction(SolChess.Types.Square from, SolChess.Types.Square to)
     {
         var accounts = new MovePieceAccounts()
         {
-            Game = _gameAddress,
             Payer = Web3.Account,
             User = FindUserPda(Web3.Account),
-            AdversaryUser = FindUserPda(Web3.Account)
+            AdversaryUser = FindUserPda(Web3.Account),
+            Game = _gameInstanceId
         };
+        var movePieceIx = SolChessProgram.MovePiece(accounts, from, to, _solchessProgramId);
         var tx = new Transaction()
         {
             FeePayer = Web3.Account,
@@ -238,24 +296,47 @@ public class SolChessClient : MonoBehaviour
             RecentBlockHash = await Web3.BlockHash()
         };
         tx.Instructions.Add(ComputeBudgetProgram.SetComputeUnitLimit(600000));
-        tx.Instructions.Add(SolChess.Program.SolChessProgram.MovePiece(accounts, from, to, ProgramId));
+        tx.Instructions.Add(movePieceIx);
         return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
     }
 
-    private async Task<bool> IsUserInitialized()
+    #endregion
+
+    #region pdas
+
+    private PublicKey FindUserPda(PublicKey accountPublicKey)
     {
-        var userPda = FindUserPda(Web3.Account);
-        var userAccountInfo = await Web3.Rpc.GetAccountInfoAsync(userPda);
-        return userAccountInfo.WasSuccessful && userAccountInfo.Result?.Value != null;
+        PublicKey.TryFindProgramAddress(new[]
+        {
+            Encoding.UTF8.GetBytes("user"), accountPublicKey
+        }, _solchessProgramId, out var pda, out _);
+        return pda;
+    }
+    
+    private PublicKey FindGamePda(PublicKey accountPublicKey, ulong gameId = 0)
+    {
+        PublicKey.TryFindProgramAddress(new[]
+        {
+            Encoding.UTF8.GetBytes("game"), accountPublicKey, BitConverter.GetBytes(gameId).Reverse().ToArray()
+        }, _solchessProgramId, out var pda, out _);
+        return pda;
+    }
+    
+    private async UniTask<bool> IsPdaInitialized(PublicKey pda)
+    {
+        var accountInfoAsync = await Web3.Rpc.GetAccountInfoAsync(pda);
+        return accountInfoAsync.WasSuccessful && accountInfoAsync.Result?.Value != null;
     }
 
-    #region utils
+    #endregion
+
+    #region mappings
 
     private static int MapFile(int file)
     {
         return file + 1;
     }
-    
+
     private static int MapRank(int rank)
     {
         return 8 - rank;
@@ -265,7 +346,7 @@ public class SolChessClient : MonoBehaviour
     {
         return file - 1;
     }
-    
+
     private static int UnMapRank(int rank)
     {
         return 8 - rank;
@@ -273,25 +354,4 @@ public class SolChessClient : MonoBehaviour
 
     #endregion
 
-    #region PDAs
-
-    private static PublicKey FindUserPda(PublicKey address)
-    {
-        PublicKey.TryFindProgramAddress(new[]
-        {
-            Encoding.UTF8.GetBytes("user"), address.KeyBytes 
-        }, ProgramId,  out var userPda, out _);
-        return userPda;
-    }
-    
-    private static PublicKey FindGamePda(PublicKey address, ulong id = 0)
-    {
-        PublicKey.TryFindProgramAddress(new[]
-        {
-            Encoding.UTF8.GetBytes("game"), address.KeyBytes, BitConverter.GetBytes(id).Reverse().ToArray()
-        }, ProgramId,  out var gamePda, out _);
-        return gamePda;
-    }
-
-    #endregion
 }

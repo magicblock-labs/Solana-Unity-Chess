@@ -16,6 +16,15 @@
         "com.unity.textmeshpro": "3.0.6"
       }
     },
+    "com.tools.webglthreadingpatcher": {
+      "version": "git@github.com:VolodymyrBS/WebGLThreadingPatcher.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "nuget.mono-cecil": "0.1.6-preview"
+      },
+      "hash": "c2f3628a028373afc8c66e443f7ce21bcb613a47"
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
@@ -36,6 +45,13 @@
       "dependencies": {
         "com.unity.ext.nunit": "1.0.6"
       },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.nuget.mono-cecil": {
+      "version": "1.10.1",
+      "depth": 2,
+      "source": "registry",
+      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.nuget.newtonsoft-json": {
@@ -80,6 +96,14 @@
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
+    },
+    "nuget.mono-cecil": {
+      "version": "1.0.0",
+      "depth": 1,
+      "source": "builtin",
+      "dependencies": {
+        "com.unity.nuget.mono-cecil": "1.10.1"
+      }
     },
     "nuget.moq": {
       "version": "1.0.0",

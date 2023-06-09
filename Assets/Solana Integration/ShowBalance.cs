@@ -1,4 +1,6 @@
 using System;
+using Cysharp.Threading.Tasks;
+using Solana.Unity.Rpc.Types;
 using Solana.Unity.SDK;
 using TMPro;
 using UnityEngine;
@@ -24,8 +26,16 @@ public class ShowBalance : MonoBehaviour
         Web3.OnBalanceChange -= BalanceChanged;
     }
     
-    private void BalanceChanged(double sol)
+    private void BalanceChanged(double balance)
     {
-        _txtBalance.text = $"{Math.Round(sol, 3)} SOL";
+        _txtBalance.text = $"Balance: {Math.Round(balance, 3)} SOL";
+        
+        // Try to request airdrop if balance is 0
+        if (Web3.Account != null && balance == 0) RequestAirdrop().Forget();
+    }
+    
+    private async UniTask RequestAirdrop()
+    { 
+        await Web3.Wallet.RequestAirdrop(commitment: Commitment.Confirmed);
     }
 }
