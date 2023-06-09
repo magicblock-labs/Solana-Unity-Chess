@@ -20,4 +20,4 @@ The Chess Engine is written with the [Anchor Framework](https://www.anchor-lang.
 
 ## Notes
 
-- Use this version [fork](https://github.com/magicblock-labs/sol-chess) of sol-chess if you are following the course tutorials. 
+- Use this [version](https://github.com/magicblock-labs/sol-chess) of sol-chess if you are following the course tutorials. 
