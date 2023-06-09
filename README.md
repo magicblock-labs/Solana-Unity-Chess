@@ -22,3 +22,12 @@ The Chess Engine is written with the [Anchor Framework](https://www.anchor-lang.
 ## Notes
 
 - Use this [version](https://github.com/magicblock-labs/sol-chess) of sol-chess if you are following the course tutorials. 
+
+
+## :video_game: Play 
+
+All this clients are compatible:
+
+- https://magicblock-labs.github.io/Solana-Unity-Chess/
+- https://chess.vicyyn.com/
+- Unity Editor and Mobile Builds (Android, IOS, Saga)
