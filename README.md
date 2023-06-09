@@ -16,7 +16,8 @@ The UI is a simplifed version of [UnityChess](https://github.com/ErkrodC/UnityCh
 
 The Chess Engine is written with the [Anchor Framework](https://www.anchor-lang.com/) by [vicyyn](https://github.com/vicyyn). Make sure to support him and leave a star to the [sol-chess](https://github.com/vicyyn/sol-chess) repository.
 
-![68747470733a2f2f692e696d6775722e636f6d2f5359426c4334392e6a7067](https://github.com/magicblock-labs/Solana-Unity-Chess/assets/12031208/abccf91a-1d36-4e12-a982-46b3b26039d2)
+<img width="1554" alt="Screenshot 2023-06-09 at 19 31 24" src="https://github.com/magicblock-labs/Solana-Unity-Chess/assets/12031208/d4aa9994-e6c0-4da6-bfe3-eae821b29e60">
+
 
 ## Notes
 
