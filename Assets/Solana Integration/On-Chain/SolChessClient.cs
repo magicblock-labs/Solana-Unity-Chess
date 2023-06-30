@@ -287,8 +287,6 @@ public class SolChessClient : MonoBehaviour
             var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
             password: sessionPassword);
 
-            // TODO: If the token is no longer valid, revoke and create a new one
-
             if (!(await sessionWallet.IsSessionTokenInitialized()))
             {
                 var topUp = true;
@@ -307,23 +305,60 @@ public class SolChessClient : MonoBehaviour
 
     private async Task<RequestResult<string>> MakeMoveTransaction(SolChess.Types.Square from, SolChess.Types.Square to)
     {
-        var accounts = new MovePieceAccounts()
-        {
-            Payer = Web3.Account,
-            User = FindUserPda(Web3.Account),
-            AdversaryUser = FindUserPda(Web3.Account),
-            Game = _gameInstanceId
-        };
-        var movePieceIx = SolChessProgram.MovePiece(accounts, from, to, _solchessProgramId);
         var tx = new Transaction()
         {
             FeePayer = Web3.Account,
             Instructions = new List<TransactionInstruction>(),
             RecentBlockHash = await Web3.BlockHash()
         };
+        // Increase compute unit limit
         tx.Instructions.Add(ComputeBudgetProgram.SetComputeUnitLimit(600000));
-        tx.Instructions.Add(movePieceIx);
-        return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
+
+        var accounts = new MovePieceAccounts()
+        {
+            // This might change according to the session
+            Payer = Web3.Account,
+            User = FindUserPda(Web3.Account),
+            AdversaryUser = FindUserPda(Web3.Account),
+            Game = _gameInstanceId,
+            SessionToken = null
+        };
+
+        if (useSession)
+        {
+            var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
+            password: sessionPassword);
+
+            if (!(await sessionWallet.IsSessionTokenInitialized()))
+            {
+                var movePieceIx = SolChessProgram.MovePiece(accounts, from, to, _solchessProgramId);
+                tx.Instructions.Add(movePieceIx);
+
+                var topUp = true;
+                // Set to 1 day in unix time
+                var validity = DateTimeOffset.UtcNow.AddHours(23).ToUnixTimeSeconds();
+                var createSessionIX = sessionWallet.CreateSessionIX(topUp, validity);
+                tx.Instructions.Add(createSessionIX);
+                tx.Sign(new[] { Web3.Account, sessionWallet.Account });
+                return await sessionWallet.ActiveRpcClient.SendAndConfirmTransactionAsync(tx.Serialize());
+            }
+            else
+            {
+                tx.FeePayer = sessionWallet.Account;
+                accounts.Payer = sessionWallet.Account;
+                accounts.SessionToken = sessionWallet.SessionTokenPDA;
+
+                var movePieceIx = SolChessProgram.MovePiece(accounts, from, to, _solchessProgramId);
+                tx.Instructions.Add(movePieceIx);
+                return await sessionWallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
+            }
+        }
+        else
+        {
+            var movePieceIx = SolChessProgram.MovePiece(accounts, from, to, _solchessProgramId);
+            tx.Instructions.Add(movePieceIx);
+            return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
+        }
     }
 
     #endregion
