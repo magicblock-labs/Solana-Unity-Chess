@@ -295,7 +295,8 @@ public class SolChessClient : MonoBehaviour
                 var createSessionIX = sessionWallet.CreateSessionIX(topUp, validity);
                 tx.Instructions.Add(createSessionIX);
 
-                tx.Sign(new[] { Web3.Account, sessionWallet.Account });
+                await Web3.Wallet.SignTransaction(tx);
+                await sessionWallet.SignTransaction(tx);
                 return await sessionWallet.ActiveRpcClient.SendAndConfirmTransactionAsync(tx.Serialize());
             }
         }
@@ -339,7 +340,8 @@ public class SolChessClient : MonoBehaviour
                 var validity = DateTimeOffset.UtcNow.AddHours(23).ToUnixTimeSeconds();
                 var createSessionIX = sessionWallet.CreateSessionIX(topUp, validity);
                 tx.Instructions.Add(createSessionIX);
-                tx.Sign(new[] { Web3.Account, sessionWallet.Account });
+                await Web3.Wallet.SignTransaction(tx);
+                await sessionWallet.SignTransaction(tx);
                 return await sessionWallet.ActiveRpcClient.SendAndConfirmTransactionAsync(tx.Serialize());
             }
             else
