@@ -42,7 +42,7 @@ public class SolChessClient : MonoBehaviour
     private bool useSession = true;
 
     [SerializeField]
-    private string sessionPassword = "";
+    private string sessionPassword;
     private readonly PublicKey _solchessProgramId = new("ChessfTT9XpWA9WxrSSLMnCseRqykb9LaMXKMhyWEiR4");
 
     private SolChess.SolChessClient _solChessProgramClient;
@@ -285,7 +285,7 @@ public class SolChessClient : MonoBehaviour
         if (useSession)
         {
             var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
-            password: sessionPassword);
+            password: deriveSessionPassword());
 
             if (!(await sessionWallet.IsSessionTokenInitialized()))
             {
@@ -294,10 +294,7 @@ public class SolChessClient : MonoBehaviour
                 var validity = DateTimeOffset.UtcNow.AddHours(23).ToUnixTimeSeconds();
                 var createSessionIX = sessionWallet.CreateSessionIX(topUp, validity);
                 tx.Instructions.Add(createSessionIX);
-
-                await Web3.Wallet.SignTransaction(tx);
-                await sessionWallet.SignTransaction(tx);
-                return await sessionWallet.ActiveRpcClient.SendAndConfirmTransactionAsync(tx.Serialize());
+                tx.PartialSign(new[] { Web3.Account, sessionWallet.Account });
             }
         }
 
@@ -328,7 +325,7 @@ public class SolChessClient : MonoBehaviour
         if (useSession)
         {
             var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
-            password: sessionPassword);
+            password: deriveSessionPassword());
 
             if (!(await sessionWallet.IsSessionTokenInitialized()))
             {
@@ -340,9 +337,8 @@ public class SolChessClient : MonoBehaviour
                 var validity = DateTimeOffset.UtcNow.AddHours(23).ToUnixTimeSeconds();
                 var createSessionIX = sessionWallet.CreateSessionIX(topUp, validity);
                 tx.Instructions.Add(createSessionIX);
-                await Web3.Wallet.SignTransaction(tx);
-                await sessionWallet.SignTransaction(tx);
-                return await sessionWallet.ActiveRpcClient.SendAndConfirmTransactionAsync(tx.Serialize());
+                tx.PartialSign(new[] { Web3.Account, sessionWallet.Account });
+                return await Web3.Wallet.SignAndSendTransaction(tx, commitment: Commitment.Confirmed);
             }
             else
             {
@@ -416,5 +412,12 @@ public class SolChessClient : MonoBehaviour
     }
 
     #endregion
+
+    # region Session
+    private string deriveSessionPassword()
+    {
+        return $"{Web3.Account.PublicKey}!Cv%{sessionPassword}";
+    }
+    # endregion
 
 }

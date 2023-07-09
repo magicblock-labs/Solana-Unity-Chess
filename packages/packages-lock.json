@@ -8,14 +8,13 @@
       "hash": "f80f59f64d1dfce988b838593e5075207f44f1f0"
     },
     "com.solana.unity_sdk": {
-      "version": "git@github.com:gumhq/Solana.Unity-SDK.git",
+      "version": "file:/Users/abishek/code/Solana.Unity/Solana.Unity-SDK",
       "depth": 0,
-      "source": "git",
+      "source": "local",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.textmeshpro": "3.0.6"
-      },
-      "hash": "a1c50fac473f761e8f84c4d3e39f93b1c3b2837d"
+      }
     },
     "com.tools.webglthreadingpatcher": {
       "version": "git@github.com:VolodymyrBS/WebGLThreadingPatcher.git",
