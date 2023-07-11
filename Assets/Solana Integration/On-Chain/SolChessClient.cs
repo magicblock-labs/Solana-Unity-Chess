@@ -285,7 +285,7 @@ public class SolChessClient : MonoBehaviour
         if (useSession)
         {
             var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
-            password: deriveSessionPassword());
+            password: sessionPassword);
 
             if (!(await sessionWallet.IsSessionTokenInitialized()))
             {
@@ -325,7 +325,7 @@ public class SolChessClient : MonoBehaviour
         if (useSession)
         {
             var sessionWallet = await SessionWallet.GetSessionWallet(targetProgram: _solchessProgramId,
-            password: deriveSessionPassword());
+            password: sessionPassword);
 
             if (!(await sessionWallet.IsSessionTokenInitialized()))
             {
@@ -412,12 +412,5 @@ public class SolChessClient : MonoBehaviour
     }
 
     #endregion
-
-    # region Session
-    private string deriveSessionPassword()
-    {
-        return $"{Web3.Account.PublicKey}!Cv%{sessionPassword}";
-    }
-    # endregion
 
 }

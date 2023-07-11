@@ -8,13 +8,14 @@
       "hash": "f80f59f64d1dfce988b838593e5075207f44f1f0"
     },
     "com.solana.unity_sdk": {
-      "version": "file:/Users/abishek/code/Solana.Unity/Solana.Unity-SDK",
+      "version": "https://github.com/magicblock-labs/Solana.Unity-SDK.git",
       "depth": 0,
-      "source": "local",
+      "source": "git",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.textmeshpro": "3.0.6"
-      }
+      },
+      "hash": "97791cabc96a9624d903316347f245a9c616a443"
     },
     "com.tools.webglthreadingpatcher": {
       "version": "git@github.com:VolodymyrBS/WebGLThreadingPatcher.git",
