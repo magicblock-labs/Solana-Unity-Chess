@@ -154,7 +154,8 @@ namespace SolChess
             GameAlreadyStarted = 6008U,
             InvalidAdversaryUserAccount = 6009U,
             AlreadyInGame = 6010U,
-            AlreadyOfferedDraw = 6011U
+            AlreadyOfferedDraw = 6011U,
+            InvalidUser = 6012U
         }
     }
 
@@ -434,7 +435,7 @@ namespace SolChess
 
         protected override Dictionary<uint, ProgramError<SolChessErrorKind>> BuildErrorsDictionary()
         {
-            return new Dictionary<uint, ProgramError<SolChessErrorKind>>{{6000U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.UserAlreadyInGame, "User Already In Game")}, {6001U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.ColorNotAvailable, "Color Not Available")}, {6002U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidGameState, "Invalid Game State")}, {6003U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.NotUsersTurn, "Not User's Turn")}, {6004U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidMove, "Invalid Move")}, {6005U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.KingInCheck, "King in Check")}, {6006U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InsufficientBalance, "Insufficient Balance")}, {6007U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.NotInGame, "Not In Game")}, {6008U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.GameAlreadyStarted, "Game Already Started")}, {6009U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidAdversaryUserAccount, "Invalid Adversary User Account")}, {6010U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.AlreadyInGame, "User Already In Game")}, {6011U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.AlreadyOfferedDraw, "Already Offered Draw")}, };
+            return new Dictionary<uint, ProgramError<SolChessErrorKind>>{{6000U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.UserAlreadyInGame, "User Already In Game")}, {6001U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.ColorNotAvailable, "Color Not Available")}, {6002U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidGameState, "Invalid Game State")}, {6003U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.NotUsersTurn, "Not User's Turn")}, {6004U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidMove, "Invalid Move")}, {6005U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.KingInCheck, "King in Check")}, {6006U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InsufficientBalance, "Insufficient Balance")}, {6007U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.NotInGame, "Not In Game")}, {6008U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.GameAlreadyStarted, "Game Already Started")}, {6009U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidAdversaryUserAccount, "Invalid Adversary User Account")}, {6010U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.AlreadyInGame, "User Already In Game")}, {6011U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.AlreadyOfferedDraw, "Already Offered Draw")}, {6012U, new ProgramError<SolChessErrorKind>(SolChessErrorKind.InvalidUser, "Invalid User")}, };
         }
     }
 
@@ -480,6 +481,8 @@ namespace SolChess
             public PublicKey AdversaryUser { get; set; }
 
             public PublicKey Game { get; set; }
+
+            public PublicKey SessionToken { get; set; }
         }
 
         public class DepositAccounts
@@ -596,7 +599,7 @@ namespace SolChess
             public static Solana.Unity.Rpc.Models.TransactionInstruction MovePiece(MovePieceAccounts accounts, Square from, Square to, PublicKey programId)
             {
                 List<Solana.Unity.Rpc.Models.AccountMeta> keys = new()
-                {Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.Payer, true), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.User, false), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.AdversaryUser, false), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.Game, false)};
+                {Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.Payer, true), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.User, false), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.AdversaryUser, false), Solana.Unity.Rpc.Models.AccountMeta.Writable(accounts.Game, false), Solana.Unity.Rpc.Models.AccountMeta.ReadOnly(accounts.SessionToken == null ? programId : accounts.SessionToken, false)};
                 byte[] _data = new byte[1200];
                 int offset = 0;
                 _data.WriteU64(5542210051077342600UL, offset);
